@@ -3,6 +3,8 @@ import time
 import optparse
 import math
 import numpy as np
+import re
+import glob
 
 class Options:
     def __init__(self):
@@ -29,12 +31,18 @@ OUTPUT_SIZE = (720,480)
 
 def main():
     options = Options()
-    if options.input_file:
+    filetype = re.search('\.(.*)', options.input_file)
+    if filetype:
+       filetype = filetype.group(0) 
+
+    if not options.input_file:
+        cap = cv2.VideoCapture(0)
+        time.sleep(2) # let the camera "warm up"
+    elif filetype in [".mp4", ".jpg", ".jpeg", ".png"]:
         cap = cv2.VideoCapture(options.input_file)
     else:
-        cap = cv2.VideoCapture(0)
-        time.sleep(2)
-
+        print("file must have suffix .mp4 .jpg .jpeg or .png")
+        quit()
 
     cv2.namedWindow('bgr', cv2.WINDOW_NORMAL)
     cv2.namedWindow('grey', cv2.WINDOW_NORMAL)
@@ -43,12 +51,14 @@ def main():
     ret, original = cap.read()
 
     while(True):
+        if filetype in [".mp4"]:
+            ret, original = cap.read()
         bgr = original.copy()
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
         grey = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
         #mask = mask_image(hsv, screen.get_mask_values())
-        cv2.multiply(grey, 1.75, grey)
+        cv2.multiply(grey, 2, grey)
         #grey = cv2.GaussianBlur(grey, (5,5), 0)
 
         ret, mask = cv2.threshold(grey,225,255,cv2.THRESH_BINARY_INV)
@@ -59,7 +69,6 @@ def main():
         for contour in contours:
             # chuck out contours which are too small or too big
             area = cv2.contourArea(contour)
-            print(area)
             if area < 10000 or area > 500000:
                 continue
 
@@ -80,7 +89,11 @@ def main():
             # make a copy of the bgr image then crop it to the bounding box
             clone = bgr.copy()
             clone = clone[tl[1]:br[1], tl[0]:br[0]]
-            cv2.imshow(str(id), clone)
+            if options.output_dir:
+                name = "{}/{}-{}.jpg".format(options.output_dir, options.input_file.split("/")[-1].split(".")[0], str(id))
+                cv2.imwrite(name, clone)
+            else:
+                cv2.imshow(str(id), clone)
 
             # using a smaller bounding box find the average color
             # could use this to differentiate between multiple dice
@@ -91,6 +104,9 @@ def main():
 
             # draw a colored rectangle for now
             cv2.rectangle(bgr, tl, br, color, 5)
+
+        if options.output_dir:
+            break
 
         # draw the contours in green
         cv2.drawContours(bgr, contours, -1, (0,255,0), 2)
@@ -114,12 +130,10 @@ def main():
         cv2.imshow("bgr", bgr)
         cv2.imshow("grey", grey)
         cv2.imshow("mask", mask)
-
     
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    time.sleep(9999999)
     cap.release()
     cv2.destroyAllWindows()
 
