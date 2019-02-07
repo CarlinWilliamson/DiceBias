@@ -26,7 +26,7 @@ class Options:
 def clamp(x, lower, upper):
     return min(max(x,lower),upper)
 
-BOUNDING_TOLERANCE = 100
+BOUNDING_TOLERANCE = 40
 OUTPUT_SIZE = (720,480)
 
 def main():
@@ -43,10 +43,10 @@ def main():
     else:
         print("file must have suffix .mp4 .jpg .jpeg or .png")
         quit()
-
-    cv2.namedWindow('bgr', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('grey', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
+    if options.use_screen:
+        cv2.namedWindow('bgr', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('grey', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('mask', cv2.WINDOW_NORMAL)
 
     ret, original = cap.read()
 
@@ -66,22 +66,31 @@ def main():
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
 
         id = 0
+        print("\n\n")
         for contour in contours:
             # chuck out contours which are too small or too big
             area = cv2.contourArea(contour)
-            if area < 10000 or area > 500000:
+            if area < 120000 or area > 200000:
                 continue
-
+            print(area)
             # calculate corners of a bounding box around the dice
             tl = (clamp(contour[:,0,0].min() - BOUNDING_TOLERANCE, 0, bgr.shape[1]), clamp(contour[:,0,1].min() - BOUNDING_TOLERANCE, 0, bgr.shape[0]))
             br = (clamp(contour[:,0,0].max() + BOUNDING_TOLERANCE, 0, bgr.shape[1]), clamp(contour[:,0,1].max() + BOUNDING_TOLERANCE, 0, bgr.shape[0]))
 
             # chuck out contours whose bounding box aspect ratio is not
             # very square
-            aspect_ratio = (br[0] - tl[0])/(br[1] - tl[1])
-            if aspect_ratio > 1.5 or aspect_ratio < 0.5:
+            width = br[0] - tl[0]
+            height = br[1] - tl[1]
+            aspect_ratio = width/height
+            if aspect_ratio > 1.2 or aspect_ratio < 0.8:
                 continue
+            print(aspect_ratio)
             id = id + 1
+
+            """fullness = area/(width*height)
+            if fullness > .6 or fullness < .2:
+                continue
+            print(fullness)"""
 
             #center = (math.floor((tl[0] + br[0])/2), math.floor((tl[1] + br[1])/2))
             #color = tuple(bgr[center[1],center[0]]*1.0)
@@ -90,9 +99,10 @@ def main():
             clone = bgr.copy()
             clone = clone[tl[1]:br[1], tl[0]:br[0]]
             if options.output_dir:
-                name = "{}/{}-{}.jpg".format(options.output_dir, options.input_file.split("/")[-1].split(".")[0], str(id))
+                name = "{}/{}/{}_{}.jpg".format(options.output_dir, options.input_file.split("/")[-1].split("_")[0], options.input_file.split("/")[-1].split(".")[0], str(id))
+                print(name)
                 cv2.imwrite(name, clone)
-            else:
+            if options.use_screen:
                 cv2.imshow(str(id), clone)
 
             # using a smaller bounding box find the average color
@@ -103,33 +113,21 @@ def main():
             color = (tight[0,0,0].max() * 1.0, tight[0,0,1].max() * 1.0, tight[0,0,2].max() * 1.0)
 
             # draw a colored rectangle for now
-            cv2.rectangle(bgr, tl, br, color, 5)
+            if options.use_screen:
+                cv2.rectangle(bgr, tl, br, color, 5)
 
         if options.output_dir:
             break
 
         # draw the contours in green
         cv2.drawContours(bgr, contours, -1, (0,255,0), 2)
-
-        """circles = cv2.HoughCircles(grey,cv2.HOUGH_GRADIENT,1,70, param1=50,param2=30,minRadius=30,maxRadius=60)
-
-        #print(circles)
-        if circles is not None:
-            circles = np.uint16(np.around(circles))
-            for i in circles[0,:]:
-                # draw the outer circle
-                cv2.circle(bgr,(i[0],i[1]),i[2],(0,255,0),2)
-                # draw the center of the circle
-                cv2.circle(bgr,(i[0],i[1]),2,(0,0,255),3)
-
-                cv2.imshow('detected circles',bgr)"""
-
-        cv2.resize(bgr, OUTPUT_SIZE, bgr)
-        cv2.resize(grey, OUTPUT_SIZE, grey)
-        cv2.resize(mask, OUTPUT_SIZE, mask)
-        cv2.imshow("bgr", bgr)
-        cv2.imshow("grey", grey)
-        cv2.imshow("mask", mask)
+        if options.use_screen:
+            cv2.resize(bgr, OUTPUT_SIZE, bgr)
+            cv2.resize(grey, OUTPUT_SIZE, grey)
+            cv2.resize(mask, OUTPUT_SIZE, mask)
+            cv2.imshow("bgr", bgr)
+            cv2.imshow("grey", grey)
+            cv2.imshow("mask", mask)
     
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
