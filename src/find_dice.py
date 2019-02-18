@@ -26,7 +26,7 @@ class Options:
 def clamp(x, lower, upper):
     return min(max(x,lower),upper)
 
-BOUNDING_TOLERANCE = 40
+BOUNDING_TOLERANCE = 0
 OUTPUT_SIZE = (720,480)
 
 def main():
@@ -58,7 +58,7 @@ def main():
         grey = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
         #mask = mask_image(hsv, screen.get_mask_values())
-        cv2.multiply(grey, 2, grey)
+        cv2.multiply(grey, 2.5, grey)
         #grey = cv2.GaussianBlur(grey, (5,5), 0)
 
         ret, mask = cv2.threshold(grey,225,255,cv2.THRESH_BINARY_INV)
@@ -70,7 +70,7 @@ def main():
         for contour in contours:
             # chuck out contours which are too small or too big
             area = cv2.contourArea(contour)
-            if area < 120000 or area > 200000:
+            if area < 80000 or area > 150000:
                 continue
             print(area)
             # calculate corners of a bounding box around the dice
@@ -92,16 +92,17 @@ def main():
                 continue
             print(fullness)"""
 
-            #center = (math.floor((tl[0] + br[0])/2), math.floor((tl[1] + br[1])/2))
+            center = (math.floor((tl[0] + br[0])/2), math.floor((tl[1] + br[1])/2))
             #color = tuple(bgr[center[1],center[0]]*1.0)
 
             # make a copy of the bgr image then crop it to the bounding box
             clone = bgr.copy()
-            clone = clone[tl[1]:br[1], tl[0]:br[0]]
+            clone = clone[center[1]-140:center[1]+140, center[0]-140:center[0]+140]
             if options.output_dir:
-                name = "{}/{}/{}_{}.jpg".format(options.output_dir, options.input_file.split("/")[-1].split("_")[0], options.input_file.split("/")[-1].split(".")[0], str(id))
+                name = "{}/{}/{}_{}.png".format(options.output_dir, options.input_file.split("/")[-1].split("_")[0], options.input_file.split("/")[-1].split(".")[0], str(id))
                 print(name)
-                cv2.imwrite(name, clone)
+                c = cv2.cvtColor(clone, cv2.COLOR_BGR2GRAY)
+                cv2.imwrite(name, c)
             if options.use_screen:
                 cv2.imshow(str(id), clone)
 
