@@ -97,15 +97,24 @@ def main():
 
             # make a copy of the bgr image then crop it to the bounding box
             clone = bgr.copy()
-            clone = clone[center[1]-140:center[1]+140, center[0]-140:center[0]+140]
+            clone = clone[center[1]-280:center[1]+280, center[0]-280:center[0]+280]
+            clone = cv2.cvtColor(clone, cv2.COLOR_BGR2GRAY)
+            clone = cv2.resize(clone, (64,64))
+            #clone = clone/255/5
+            #np.round(clone, 2, clone)
+            #clone = clone*5
+            #print(clone)
             if options.output_dir:
                 name = "{}/{}/{}_{}.png".format(options.output_dir, options.input_file.split("/")[-1].split("_")[0], options.input_file.split("/")[-1].split(".")[0], str(id))
                 print(name)
                 c = cv2.cvtColor(clone, cv2.COLOR_BGR2GRAY)
                 cv2.imwrite(name, c)
             if options.use_screen:
+                #cv2.namedWindow(str(id), cv2.WINDOW_NORMAL)
+                #cv2.resizeWindow(str(id), 640,640)
                 cv2.imshow(str(id), clone)
 
+            """
             # using a smaller bounding box find the average color
             # could use this to differentiate between multiple dice
             tight_tl = (int(clone.shape[0]*0.4), int(clone.shape[1]*0.4))
@@ -115,7 +124,7 @@ def main():
 
             # draw a colored rectangle for now
             if options.use_screen:
-                cv2.rectangle(bgr, tl, br, color, 5)
+                cv2.rectangle(bgr, tl, br, color, 5)"""
 
         if options.output_dir:
             break
